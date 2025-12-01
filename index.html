@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Carnival RNG</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #111;
+    color: #fff;
+    margin: 0;
+    padding: 40px 16px;
+    text-align: center;
+}
+
+.hidden { display: none; }
+
+#number {
+    font-size: 110px;
+    margin: 60px 0;
+}
+
+button {
+    font-size: 32px;
+    padding: 26px 54px;
+    border-radius: 14px;
+    border: none;
+    background: #e63946;
+    color: #fff;
+}
+
+button:active { transform: scale(0.97); }
+
+.setup button {
+    font-size: 22px;
+    padding: 18px 36px;
+}
+
+input[type="number"], input[type="text"] {
+    font-size: 18px;
+    width: 240px;
+    text-align: center;
+    padding: 6px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- DM SETUP -->
+<div id="setup" class="setup">
+    <h1>DM Setup</h1>
+
+    <p>
+        Max Roll Value:<br>
+        <input type="number" id="maxValue" value="100" min="2">
+    </p>
+
+    <p>
+        <label>
+            <input type="radio" name="mode" value="random" checked>
+            True Random
+        </label>
+    </p>
+
+    <p>
+        <label>
+            <input type="radio" name="mode" value="forced">
+            Force Outcomes
+        </label>
+    </p>
+
+    <p>
+        Forced List:<br>
+        <input type="text" id="forcedList" placeholder="e.g. 2,93,76,14">
+    </p>
+
+    <p>
+        Blacklisted Numbers (optional):<br>
+        <input type="text" id="blacklist" placeholder="e.g. 5,8,72">
+    </p>
+
+    <br>
+    <button onclick="start()">Start</button>
+</div>
+
+<!-- PLAYER VIEW -->
+<div id="play" class="hidden">
+    <h1 id="title">Roll</h1>
+    <div id="number">—</div>
+    <button onclick="roll()">GENERATE</button>
+</div>
+
+<script>
+let mode = "random";
+let forced = [];
+let forcedIndex = 0;
+let banned = new Set();
+let maxRoll = 100;
+
+function parseList(raw, max) {
+    return raw
+        .split(",")
+        .map(n => parseInt(n.trim()))
+        .filter(n => n >= 1 && n <= max);
+}
+
+function start() {
+    maxRoll = parseInt(document.getElementById("maxValue").value);
+    if (!maxRoll || maxRoll < 2) {
+        alert("Max roll must be 2 or higher.");
+        return;
+    }
+
+    mode = document.querySelector('input[name="mode"]:checked').value;
+
+    forced = [];
+    banned.clear();
+
+    const forcedRaw = document.getElementById("forcedList").value;
+    const bannedRaw = document.getElementById("blacklist").value;
+
+    if (forcedRaw) {
+        forced = parseList(forcedRaw, maxRoll);
+        forcedIndex = 0;
+    }
+
+    if (bannedRaw) {
+        parseList(bannedRaw, maxRoll).forEach(n => banned.add(n));
+    }
+
+    if (mode === "forced" && forced.length === 0) {
+        alert("Forced mode requires at least one valid number.");
+        return;
+    }
+
+    document.getElementById("title").innerText = `Roll 1–${maxRoll}`;
+    document.getElementById("setup").classList.add("hidden");
+    document.getElementById("play").classList.remove("hidden");
+}
+
+function roll() {
+    const display = document.getElementById("number");
+    display.innerText = "…";
+
+    setTimeout(() => {
+        let result;
+
+        if (mode === "forced") {
+            result = forced[forcedIndex];
+            forcedIndex = (forcedIndex + 1) % forced.length;
+        } else {
+            do {
+                result = Math.floor(Math.random() * maxRoll) + 1;
+            } while (banned.has(result));
+        }
+
+        display.innerText = result;
+    }, 700);
+}
+
+/* Secret Reset */
+let pressTimer;
+const title = document.getElementById("title");
+
+title.addEventListener("touchstart", () => {
+    pressTimer = setTimeout(reset, 1250);
+});
+title.addEventListener("touchend", () => clearTimeout(pressTimer));
+title.addEventListener("touchmove", () => clearTimeout(pressTimer));
+
+function reset() {
+    document.getElementById("play").classList.add("hidden");
+    document.getElementById("setup").classList.remove("hidden");
+    document.getElementById("number").innerText = "—";
+}
+</script>
+
+</body>
+</html>
